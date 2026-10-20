@@ -44,9 +44,11 @@ class Export extends Model
             return $this->morphTo();
         }
 
+        /** @var ?Authenticatable $authenticatable */
         $authenticatable = app(Authenticatable::class);
 
         if ($authenticatable) {
+            /** @phpstan-ignore-next-line */
             return $this->belongsTo($authenticatable::class);
         }
 
@@ -54,6 +56,7 @@ class Export extends Model
             throw new Exception('No [App\\Models\\User] model found. Please bind an authenticatable model to the [Illuminate\\Contracts\\Auth\\Authenticatable] interface in a service provider\'s [register()] method.');
         }
 
+        /** @phpstan-ignore-next-line */
         return $this->belongsTo(User::class);
     }
 
@@ -95,5 +98,15 @@ class Export extends Model
     public function getFileDirectory(): string
     {
         return 'filament_exports' . DIRECTORY_SEPARATOR . $this->getKey();
+    }
+
+    public function deleteFileDirectory(): void
+    {
+        $disk = $this->getFileDisk();
+        $directory = $this->getFileDirectory();
+
+        if ($disk->directoryExists($directory)) {
+            $disk->deleteDirectory($directory);
+        }
     }
 }

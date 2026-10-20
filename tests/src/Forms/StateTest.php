@@ -21,7 +21,7 @@ test('container has state path', function () {
 test('container has state path and inherits state path from parent component', function () {
     $container = ComponentContainer::make(Livewire::make())
         ->parentComponent(
-            (new Component())
+            (new Component)
                 ->container(ComponentContainer::make(Livewire::make()))
                 ->statePath($parentComponentStatePath = Str::random()),
         )
@@ -32,7 +32,7 @@ test('container has state path and inherits state path from parent component', f
 });
 
 test('component has state path', function () {
-    $component = (new Component())
+    $component = (new Component)
         ->container(ComponentContainer::make(Livewire::make()))
         ->statePath($componentStatePath = Str::random());
 
@@ -41,7 +41,7 @@ test('component has state path', function () {
 });
 
 test('component inherits state path from container', function () {
-    $component = (new Component())
+    $component = (new Component)
         ->container(
             ComponentContainer::make(Livewire::make())
                 ->statePath($containerStatePath = Str::random()),
@@ -52,7 +52,7 @@ test('component inherits state path from container', function () {
 });
 
 test('component has state path and inherits state path from container', function () {
-    $component = (new Component())
+    $component = (new Component)
         ->container(
             ComponentContainer::make(Livewire::make())
                 ->statePath($containerStatePath = Str::random()),
@@ -67,7 +67,7 @@ test('state can be hydrated from array', function () {
     ComponentContainer::make($livewire = Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath($statePath = Str::random()),
         ])
         ->fill([$statePath => ($state = Str::random())]);
@@ -87,7 +87,7 @@ test('hydrating array state can overwrite existing state', function () {
     )
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath($statePath),
         ])
         ->fill([]);
@@ -100,7 +100,7 @@ test('state can be hydrated from defaults', function () {
     ComponentContainer::make($livewire = Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath($statePath = Str::random())
                 ->default($state = Str::random()),
         ])
@@ -121,7 +121,7 @@ test('hydrating default state can overwrite existing state', function () {
     )
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath($statePath),
         ])
         ->fill();
@@ -134,10 +134,10 @@ test('child component state is not lost by hydrating parent component', function
     ComponentContainer::make($livewire = Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath($parentStatePath = Str::random())
                 ->schema([
-                    (new Component())
+                    (new Component)
                         ->statePath($statePath = Str::random())
                         ->default($state = Str::random()),
                 ]),
@@ -152,10 +152,10 @@ test('child component state is not lost by hydrating parent component defaults',
     ComponentContainer::make($livewire = Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath($parentStatePath = Str::random())
                 ->schema([
-                    (new Component())
+                    (new Component)
                         ->statePath($statePath = Str::random())
                         ->default($state = Str::random()),
                 ])
@@ -171,10 +171,10 @@ test('child component state can be hydrated by parent component defaults', funct
     ComponentContainer::make($livewire = Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath($parentStatePath = Str::random())
                 ->schema([
-                    (new Component())
+                    (new Component)
                         ->statePath($statePath = Str::random()),
                 ])
                 ->default([$statePath => ($state = Str::random())]),
@@ -189,10 +189,10 @@ test('child component defaults are overwritten by parent component defaults', fu
     ComponentContainer::make($livewire = Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath($parentStatePath = Str::random())
                 ->schema([
-                    (new Component())
+                    (new Component)
                         ->statePath($statePath = Str::random())
                         ->default(Str::random()),
                 ])
@@ -208,10 +208,10 @@ test('missing child component state can be filled with null', function () {
     ComponentContainer::make($livewire = Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath($parentStatePath = Str::random())
                 ->schema([
-                    (new Component())->statePath($statePath = Str::random()),
+                    (new Component)->statePath($statePath = Str::random()),
                 ])
                 ->afterStateHydrated(fn (Component $component) => $component->state([])),
         ])
@@ -225,10 +225,10 @@ test('missing hidden child component state can be filled with null', function ()
     ComponentContainer::make($livewire = Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->hidden()
                 ->schema([
-                    (new Component())->statePath($statePath = Str::random()),
+                    (new Component)->statePath($statePath = Str::random()),
                 ]),
         ])
         ->fill();
@@ -241,7 +241,7 @@ test('custom logic can be executed after state is hydrated', function () {
     ComponentContainer::make($livewire = Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath($statePath = Str::random())
                 ->afterStateHydrated(fn (Component $component, $state) => $component->state(strrev($state))),
         ])
@@ -255,7 +255,7 @@ test('custom logic can be executed after state is updated', function () {
     ComponentContainer::make($livewire = Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath($statePath = Str::random())
                 ->afterStateUpdated(fn (Component $component, $state) => $component->state(strrev($state))),
         ])
@@ -270,7 +270,7 @@ test('custom logic can be executed after nested state is updated', function () {
     ComponentContainer::make($livewire = Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath($statePath = Str::random())
                 ->afterStateUpdated(fn (Component $component, $state) => $component->state([strrev($state[0])])),
         ])
@@ -285,10 +285,10 @@ test('custom logic can be executed after child component state is updated', func
     ComponentContainer::make($livewire = Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath($statePath = Str::random())
                 ->childComponents([
-                    (new Component())
+                    (new Component)
                         ->statePath($childComponentStatePath = Str::random())
                         ->afterStateUpdated(fn (Component $component, $state) => $component->state(strrev($state))),
                 ]),
@@ -306,7 +306,7 @@ test('custom logic can be executed only once after nested state is updated', fun
     ComponentContainer::make($livewire = Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath($statePath = Str::random())
                 ->afterStateUpdated(function () use (&$calls) {
                     $calls++;
@@ -322,7 +322,7 @@ test('custom logic can be executed more than once after nested state is updated 
     ComponentContainer::make($livewire = Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath($statePath = Str::random())
                 ->afterStateUpdated(fn (Component $component, $state) => $component->state([$state[0] + 1])),
         ])
@@ -338,10 +338,10 @@ test('custom logic on parent component can be executed after child component sta
     ComponentContainer::make($livewire = Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath($statePath = Str::random())
                 ->childComponents([
-                    (new Component())
+                    (new Component)
                         ->statePath($childComponentStatePath = Str::random()),
                 ])
                 ->afterStateUpdated(fn (Component $component, $state) => $component->state([
@@ -359,7 +359,7 @@ test('state can be dehydrated', function () {
     $container = ComponentContainer::make(Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath($statePath = Str::random())
                 ->default($state = Str::random()),
         ])
@@ -375,7 +375,7 @@ test('state can be dehydrated using custom logic', function () {
     $container = ComponentContainer::make(Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath($statePath = Str::random())
                 ->default($state = Str::random())
                 ->dehydrateStateUsing(fn ($state) => strrev($state)),
@@ -392,7 +392,7 @@ test('custom logic can be executed before state is dehydrated', function () {
     $container = ComponentContainer::make(Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath($statePath = Str::random())
                 ->default($state = Str::random())
                 ->beforeStateDehydrated(fn (Component $component, $state) => $component->state(strrev($state))),
@@ -411,7 +411,7 @@ test('components can be excluded from state dehydration', function () {
     $container = ComponentContainer::make(Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath(Str::random())
                 ->default(Str::random())
                 ->dehydrated(false),
@@ -426,10 +426,10 @@ test('components can be excluded from state dehydration if their parent componen
     $container = ComponentContainer::make(Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->dehydrated(false)
                 ->schema([
-                    (new Component())
+                    (new Component)
                         ->statePath(Str::random())
                         ->default(Str::random()),
                 ]),
@@ -444,7 +444,7 @@ test('hidden components are excluded from state dehydration', function () {
     $container = ComponentContainer::make(Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath(Str::random())
                 ->default(Str::random())
                 ->hidden(),
@@ -459,10 +459,10 @@ test('hidden components are excluded from state dehydration if their parent comp
     $container = ComponentContainer::make(Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->hidden()
                 ->schema([
-                    (new Component())
+                    (new Component)
                         ->statePath(Str::random())
                         ->default(Str::random()),
                 ]),
@@ -477,7 +477,7 @@ test('hidden components are excluded from state dehydration except if they are m
     $container = ComponentContainer::make(Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath(Str::random())
                 ->default(Str::random())
                 ->hidden()
@@ -486,14 +486,146 @@ test('hidden components are excluded from state dehydration except if they are m
         ->fill();
 
     expect($container)
-        ->dehydrateState()->not()->toBe([]);
+        ->dehydrateState()->data->not()->toBe([]);
+
+    $container = ComponentContainer::make(Livewire::make())
+        ->statePath('data')
+        ->components([
+            (new Component)
+                ->id('parent')
+                ->hidden()
+                ->dehydratedWhenHidden()
+                ->childComponents([
+                    (new Component)
+                        ->id('child')
+                        ->statePath(Str::random())
+                        ->default(Str::random()),
+                ]),
+        ])
+        ->fill();
+
+    expect($container)
+        ->dehydrateState()->data->not()->toBe([]);
+});
+
+test('hidden components are excluded from state dehydration even if their parent component has a state path', function () {
+    $container = ComponentContainer::make(Livewire::make())
+        ->statePath('data')
+        ->components([
+            (new Component)
+                ->statePath('nested')
+                ->schema([
+                    (new Component)
+                        ->statePath(Str::random())
+                        ->default(Str::random())
+                        ->hidden(),
+                ]),
+        ])
+        ->fill();
+
+    expect($container)
+        ->dehydrateState()->toBe([
+            'data' => [
+                'nested' => [],
+            ],
+        ]);
+});
+
+test('components are not excluded from state dehydration if there is another dehydrated field with the same name', function () {
+    $container = ComponentContainer::make(Livewire::make())
+        ->statePath('data')
+        ->components([
+            (new Component)
+                ->statePath($statePath = Str::random())
+                ->default(Str::random())
+                ->dehydrated(false),
+            (new Component)
+                ->statePath($statePath)
+                ->default(Str::random()),
+        ])
+        ->fill();
+
+    expect($container)
+        ->dehydrateState()->data->not()->toBe([]);
+
+    $container = ComponentContainer::make(Livewire::make())
+        ->statePath('data')
+        ->components([
+            (new Component)
+                ->statePath($statePath = Str::random())
+                ->default(Str::random()),
+            (new Component)
+                ->statePath($statePath)
+                ->default(Str::random())
+                ->dehydrated(false),
+        ])
+        ->fill();
+
+    expect($container)
+        ->dehydrateState()->data->not()->toBe([]);
+});
+
+test('hidden components are not excluded from state dehydration if there is another visible field with the same name', function () {
+    $container = ComponentContainer::make(Livewire::make())
+        ->statePath('data')
+        ->components([
+            (new Component)
+                ->statePath($statePath = Str::random())
+                ->default(Str::random())
+                ->hidden(),
+            (new Component)
+                ->statePath($statePath)
+                ->default(Str::random()),
+        ])
+        ->fill();
+
+    expect($container)
+        ->dehydrateState()->data->not()->toBe([]);
+
+    $container = ComponentContainer::make(Livewire::make())
+        ->statePath('data')
+        ->components([
+            (new Component)
+                ->statePath($statePath = Str::random())
+                ->default(Str::random()),
+            (new Component)
+                ->statePath($statePath)
+                ->default(Str::random())
+                ->hidden(),
+        ])
+        ->fill();
+
+    expect($container)
+        ->dehydrateState()->data->not()->toBe([]);
+});
+
+test('components in a hidden parent component with a grandparent component with a state path are excluded from state dehydration', function () {
+    $container = ComponentContainer::make(Livewire::make())
+        ->statePath('data')
+        ->components([
+            (new Component)
+                ->statePath('data')
+                ->schema([
+                    (new Component)
+                        ->schema([
+                            (new Component)
+                                ->statePath(Str::random())
+                                ->default(Str::random()),
+                        ])
+                        ->hidden(),
+                ]),
+        ])
+        ->fill();
+
+    expect($container)
+        ->dehydrateState()->toBe(['data' => ['data' => []]]);
 });
 
 test('disabled components are excluded from state dehydration', function () {
     $container = ComponentContainer::make(Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath(Str::random())
                 ->default(Str::random())
                 ->disabled(),
@@ -508,10 +640,10 @@ test('disabled components are excluded from state dehydration if their parent co
     $container = ComponentContainer::make(Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->disabled()
                 ->schema([
-                    (new Component())
+                    (new Component)
                         ->statePath(Str::random())
                         ->default(Str::random()),
                 ]),
@@ -526,7 +658,7 @@ test('disabled components are excluded from state dehydration except if they are
     $container = ComponentContainer::make(Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath(Str::random())
                 ->default(Str::random())
                 ->disabled()
@@ -535,17 +667,17 @@ test('disabled components are excluded from state dehydration except if they are
         ->fill();
 
     expect($container)
-        ->dehydrateState()->not()->toBe([]);
+        ->dehydrateState()->data->not()->toBe([]);
 });
 
 test('disabled components are excluded from state dehydration if their parent component is disabled and not marked as dehydrated', function () {
     $container = ComponentContainer::make(Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->disabled()
                 ->schema([
-                    (new Component())
+                    (new Component)
                         ->statePath(Str::random())
                         ->default(Str::random())
                         ->dehydrated(),
@@ -561,7 +693,7 @@ test('dehydrated state can be mutated', function () {
     $container = ComponentContainer::make(Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath($statePath = Str::random())
                 ->default($state = Str::random())
                 ->mutateDehydratedStateUsing(fn ($state) => strrev($state)),
@@ -580,7 +712,7 @@ test('sibling state can be retrieved relatively from another component', functio
     ComponentContainer::make(Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath($statePath = Str::random())
                 ->default($state = Str::random()),
             $placeholder = Placeholder::make(Str::random())
@@ -596,10 +728,10 @@ test('sibling nested state can be retrieved relatively from another component', 
     ComponentContainer::make(Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath($parentStatePath = Str::random())
                 ->schema([
-                    (new Component())
+                    (new Component)
                         ->statePath($statePath = Str::random())
                         ->default($state = Str::random()),
                 ]),
@@ -616,10 +748,10 @@ test('parent sibling state can be retrieved relatively from another component', 
     ComponentContainer::make(Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath($statePath = Str::random())
                 ->default($state = Str::random()),
-            (new Component())
+            (new Component)
                 ->statePath(Str::random())
                 ->schema([
                     $placeholder = Placeholder::make(Str::random())
@@ -636,7 +768,7 @@ test('sibling state can be retrieved absolutely from another component', functio
     ComponentContainer::make(Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath($statePath = Str::random())
                 ->default($state = Str::random()),
             $placeholder = Placeholder::make(Str::random())
@@ -652,10 +784,10 @@ test('sibling nested state can be retrieved absolutely from another component', 
     ComponentContainer::make(Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath($parentStatePath = Str::random())
                 ->schema([
-                    (new Component())
+                    (new Component)
                         ->statePath($statePath = Str::random())
                         ->default($state = Str::random()),
                 ]),
@@ -672,10 +804,10 @@ test('parent sibling state can be retrieved absolutely from another component', 
     ComponentContainer::make(Livewire::make())
         ->statePath('data')
         ->components([
-            (new Component())
+            (new Component)
                 ->statePath($statePath = Str::random())
                 ->default($state = Str::random()),
-            (new Component())
+            (new Component)
                 ->statePath(Str::random())
                 ->schema([
                     $placeholder = Placeholder::make(Str::random())

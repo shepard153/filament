@@ -16,7 +16,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Arr;
-use League\Csv\ByteSequence;
+use Illuminate\Support\Facades\DB;
 use League\Csv\Writer;
 use SplTempFileObject;
 use Throwable;
@@ -65,54 +65,68 @@ class ExportCsv implements ShouldQueue
         /** @var Authenticatable $user */
         $user = $this->export->user;
 
-        auth()->setUser($user);
-
-        $exceptions = [];
-
-        $processedRows = 0;
-        $successfulRows = 0;
-
-        $csv = Writer::createFromFileObject(new SplTempFileObject());
-        $csv->setDelimiter($this->exporter::getCsvDelimiter());
-        $csv->setOutputBOM(ByteSequence::BOM_UTF8);
-
-        $query = EloquentSerializeFacade::unserialize($this->query);
-
-        foreach ($this->exporter->getCachedColumns() as $column) {
-            $column->applyRelationshipAggregates($query);
-            $column->applyEagerLoading($query);
+        if (method_exists(auth()->guard(), 'login')) {
+            auth()->login($user);
+        } else {
+            auth()->setUser($user);
         }
 
-        foreach ($query->find($this->records) as $record) {
-            try {
-                $csv->insertOne(($this->exporter)($record));
+        try {
+            $exceptions = [];
 
-                $successfulRows++;
-            } catch (Throwable $exception) {
-                $exceptions[$exception::class] = $exception;
+            $processedRows = 0;
+            $successfulRows = 0;
+
+            $csv = Writer::createFromFileObject(new SplTempFileObject);
+            $csv->setDelimiter($this->exporter::getCsvDelimiter());
+
+            $query = EloquentSerializeFacade::unserialize($this->query);
+
+            foreach ($this->exporter->getCachedColumns() as $column) {
+                $column->applyRelationshipAggregates($query);
+                $column->applyEagerLoading($query);
             }
 
-            $processedRows++;
+            foreach ($query->find($this->records) as $record) {
+                try {
+                    $csv->insertOne(($this->exporter)($record));
+
+                    $successfulRows++;
+                } catch (Throwable $exception) {
+                    $exceptions[$exception::class] = $exception;
+                }
+
+                $processedRows++;
+            }
+
+            $filePath = $this->export->getFileDirectory() . DIRECTORY_SEPARATOR . str_pad(strval($this->page), 16, '0', STR_PAD_LEFT) . '.csv';
+            $this->export->getFileDisk()->put($filePath, $csv->toString(), Filesystem::VISIBILITY_PRIVATE);
+
+            $this->export::query()
+                ->whereKey($this->export->getKey())
+                ->update([
+                    'processed_rows' => DB::raw('processed_rows + ' . $processedRows),
+                    'successful_rows' => DB::raw('successful_rows + ' . $successfulRows),
+                ]);
+
+            $this->export::query()
+                ->whereKey($this->export->getKey())
+                ->whereColumn('processed_rows', '>', 'total_rows')
+                ->update([
+                    'processed_rows' => DB::raw('total_rows'),
+                ]);
+
+            $this->export::query()
+                ->whereKey($this->export->getKey())
+                ->whereColumn('successful_rows', '>', 'total_rows')
+                ->update([
+                    'successful_rows' => DB::raw('total_rows'),
+                ]);
+
+            $this->handleExceptions($exceptions);
+        } finally {
+            auth()->forgetGuards();
         }
-
-        $filePath = $this->export->getFileDirectory() . DIRECTORY_SEPARATOR . str_pad(strval($this->page), 16, '0', STR_PAD_LEFT) . '.csv';
-        $this->export->getFileDisk()->put($filePath, $csv->toString(), Filesystem::VISIBILITY_PRIVATE);
-
-        $this->export->refresh();
-
-        $exportProcessedRows = $this->export->processed_rows + $processedRows;
-        $this->export->processed_rows = ($exportProcessedRows < $this->export->total_rows) ?
-            $exportProcessedRows :
-            $this->export->total_rows;
-
-        $exportSuccessfulRows = $this->export->successful_rows + $successfulRows;
-        $this->export->successful_rows = ($exportSuccessfulRows < $this->export->total_rows) ?
-            $exportSuccessfulRows :
-            $this->export->total_rows;
-
-        $this->export->save();
-
-        $this->handleExceptions($exceptions);
     }
 
     public function retryUntil(): ?CarbonInterface

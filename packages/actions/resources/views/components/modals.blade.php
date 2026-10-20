@@ -6,8 +6,10 @@
 
         <x-filament::modal
             :alignment="$action?->getModalAlignment()"
+            :autofocus="$action?->isModalAutofocused()"
             :close-button="$action?->hasModalCloseButton()"
             :close-by-clicking-away="$action?->isModalClosedByClickingAway()"
+            :close-by-escaping="$action?->isModalClosedByEscaping()"
             :description="$action?->getModalDescription()"
             display-classes="block"
             :extra-modal-window-attribute-bag="$action?->getExtraModalWindowAttributeBag()"
@@ -25,6 +27,10 @@
             :wire:key="$action ? $this->getId() . '.actions.' . $action->getName() . '.modal' : null"
             x-on:closed-form-component-action-modal.window="if (($event.detail.id === '{{ $this->getId() }}') && $wire.mountedActions.length) open()"
             x-on:modal-closed.stop="
+                if (!$event.detail?.id?.startsWith('{{ $this->getId() }}-')) {
+                    return
+                }
+
                 const mountedActionShouldOpenModal = {{ \Illuminate\Support\Js::from($action && $this->mountedActionShouldOpenModal(mountedAction: $action)) }}
 
                 if (! mountedActionShouldOpenModal) {
@@ -35,7 +41,7 @@
                     return
                 }
 
-                $wire.unmountAction(false)
+                $wire.unmountAction(false, false)
             "
             x-on:opened-form-component-action-modal.window="if ($event.detail.id === '{{ $this->getId() }}') close()"
         >
@@ -66,8 +72,10 @@
 
         <x-filament::modal
             :alignment="$action?->getModalAlignment()"
+            :autofocus="$action?->isModalAutofocused()"
             :close-button="$action?->hasModalCloseButton()"
             :close-by-clicking-away="$action?->isModalClosedByClickingAway()"
+            :close-by-escaping="$action?->isModalClosedByEscaping()"
             :description="$action?->getModalDescription()"
             display-classes="block"
             :extra-modal-window-attribute-bag="$action?->getExtraModalWindowAttributeBag()"
@@ -85,6 +93,10 @@
             :wire:key="$action ? $this->getId() . '.table.actions.' . $action->getName() . '.modal' : null"
             x-on:closed-form-component-action-modal.window="if (($event.detail.id === '{{ $this->getId() }}') && $wire.mountedTableActions.length) open()"
             x-on:modal-closed.stop="
+                if (!$event.detail?.id?.startsWith('{{ $this->getId() }}-')) {
+                    return
+                }
+
                 const mountedTableActionShouldOpenModal = {{ \Illuminate\Support\Js::from($action && $this->mountedTableActionShouldOpenModal(mountedAction: $action)) }}
 
                 if (! mountedTableActionShouldOpenModal) {
@@ -95,7 +107,7 @@
                     return
                 }
 
-                $wire.unmountTableAction(false)
+                $wire.unmountTableAction(false, false)
             "
             x-on:opened-form-component-action-modal.window="if ($event.detail.id === '{{ $this->getId() }}') close()"
         >
@@ -120,8 +132,10 @@
 
         <x-filament::modal
             :alignment="$action?->getModalAlignment()"
+            :autofocus="$action?->isModalAutofocused()"
             :close-button="$action?->hasModalCloseButton()"
             :close-by-clicking-away="$action?->isModalClosedByClickingAway()"
+            :close-by-escaping="$action?->isModalClosedByEscaping()"
             :description="$action?->getModalDescription()"
             display-classes="block"
             :extra-modal-window-attribute-bag="$action?->getExtraModalWindowAttributeBag()"
@@ -139,6 +153,10 @@
             :wire:key="$action ? $this->getId() . '.table.bulk-actions.' . $action->getName() . '.modal' : null"
             x-on:closed-form-component-action-modal.window="if (($event.detail.id === '{{ $this->getId() }}') && $wire.mountedTableBulkAction) open()"
             x-on:modal-closed.stop="
+                if (!$event.detail?.id?.startsWith('{{ $this->getId() }}-')) {
+                    return
+                }
+
                 const mountedTableBulkActionShouldOpenModal = {{ \Illuminate\Support\Js::from($action && $this->mountedTableBulkActionShouldOpenModal(mountedBulkAction: $action)) }}
 
                 if (! mountedTableBulkActionShouldOpenModal) {
@@ -180,8 +198,10 @@
 
         <x-filament::modal
             :alignment="$action?->getModalAlignment()"
+            :autofocus="$action?->isModalAutofocused()"
             :close-button="$action?->hasModalCloseButton()"
             :close-by-clicking-away="$action?->isModalClosedByClickingAway()"
+            :close-by-escaping="$action?->isModalClosedByEscaping()"
             :description="$action?->getModalDescription()"
             display-classes="block"
             :extra-modal-window-attribute-bag="$action?->getExtraModalWindowAttributeBag()"
@@ -199,6 +219,10 @@
             :wire:key="$action ? $this->getId() . '.infolist.actions.' . $action->getName() . '.modal' : null"
             x-on:closed-form-component-action-modal.window="if (($event.detail.id === '{{ $this->getId() }}') && $wire.mountedInfolistActions.length) open()"
             x-on:modal-closed.stop="
+                if (!$event.detail?.id?.startsWith('{{ $this->getId() }}-')) {
+                    return
+                }
+
                 const mountedInfolistActionShouldOpenModal = {{ \Illuminate\Support\Js::from($action && $this->mountedInfolistActionShouldOpenModal(mountedAction: $action)) }}
 
                 if (! mountedInfolistActionShouldOpenModal) {
@@ -209,7 +233,7 @@
                     return
                 }
 
-                $wire.unmountInfolistAction(false)
+                $wire.unmountInfolistAction(false, false)
             "
             x-on:opened-form-component-action-modal.window="if ($event.detail.id === '{{ $this->getId() }}') close()"
         >
@@ -240,8 +264,10 @@
     <form wire:submit.prevent="callMountedFormComponentAction">
         <x-filament::modal
             :alignment="$action?->getModalAlignment()"
+            :autofocus="$action?->isModalAutofocused()"
             :close-button="$action?->hasModalCloseButton()"
             :close-by-clicking-away="$action?->isModalClosedByClickingAway()"
+            :close-by-escaping="$action?->isModalClosedByEscaping()"
             :description="$action?->getModalDescription()"
             display-classes="block"
             :extra-modal-window-attribute-bag="$action?->getExtraModalWindowAttributeBag()"
@@ -258,10 +284,14 @@
             :width="$action?->getModalWidth()"
             :wire:key="$action ? $this->getId() . '.' . $action->getComponent()->getStatePath() . '.actions.' . $action->getName() . '.modal' : null"
             x-on:modal-closed.stop="
+                if (!$event.detail?.id?.startsWith('{{ $this->getId() }}-')) {
+                    return
+                }
+
                 const mountedFormComponentActionShouldOpenModal = {{ \Illuminate\Support\Js::from($action && $this->mountedFormComponentActionShouldOpenModal()) }}
 
                 if (mountedFormComponentActionShouldOpenModal) {
-                    $wire.unmountFormComponentAction(false)
+                    $wire.unmountFormComponentAction(false, false)
                 }
             "
         >

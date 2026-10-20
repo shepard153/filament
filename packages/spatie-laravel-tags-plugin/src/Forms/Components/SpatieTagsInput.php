@@ -16,7 +16,7 @@ class SpatieTagsInput extends TagsInput
     {
         parent::setUp();
 
-        $this->type(new AllTagTypes());
+        $this->type(new AllTagTypes);
 
         $this->loadStateFromRelationshipsUsing(static function (SpatieTagsInput $component, ?Model $record): void {
             if (! method_exists($record, 'tagsWithType')) {
@@ -57,7 +57,7 @@ class SpatieTagsInput extends TagsInput
 
     /**
      * Syncs tags with the record without taking types into account. This avoids recreating existing tags with an empty type.
-     * Spatie's `HasTags` trait does not have functionality for this behaviour.
+     * Spatie's `HasTags` trait does not have functionality for this behavior.
      *
      * @param  array<string>  $state
      */
@@ -100,7 +100,9 @@ class SpatieTagsInput extends TagsInput
         }
 
         $model = $this->getModel();
-        $tagClass = $model ? $model::getTagClassName() : config('tags.tag_model', Tag::class);
+        $tagClass = ($model && method_exists($model, 'getTagClassName'))
+            ? $model::getTagClassName()
+            : config('tags.tag_model', Tag::class);
         $type = $this->getType();
         $query = $tagClass::query();
 

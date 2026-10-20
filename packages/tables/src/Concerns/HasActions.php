@@ -62,9 +62,7 @@ trait HasActions
     #[Url(as: 'tableActionRecord')]
     public $defaultTableActionRecord = null;
 
-    protected function configureTableAction(Action $action): void
-    {
-    }
+    protected function configureTableAction(Action $action): void {}
 
     /**
      * @param  array<string, mixed>  $arguments
@@ -99,20 +97,22 @@ trait HasActions
             if ($this->mountedTableActionHasForm(mountedAction: $action)) {
                 $action->callBeforeFormValidated();
 
-                $action->formData($form->getState());
+                $form->getState(afterValidate: function (array $state) use ($action) {
+                    $action->callAfterFormValidated();
 
-                $action->callAfterFormValidated();
+                    $action->formData($state);
+
+                    $action->callBefore();
+                });
+            } else {
+                $action->callBefore();
             }
-
-            $action->callBefore();
 
             $result = $action->call([
                 'form' => $form,
             ]);
 
             $result = $action->callAfter() ?? $result;
-
-            $action->commitDatabaseTransaction();
         } catch (Halt $exception) {
             $exception->shouldRollbackDatabaseTransaction() ?
                 $action->rollBackDatabaseTransaction() :
@@ -139,6 +139,8 @@ trait HasActions
 
             throw $exception;
         }
+
+        $action->commitDatabaseTransaction();
 
         if (store($this)->has('redirect')) {
             return $result;
@@ -304,6 +306,7 @@ trait HasActions
         try {
             return array_pop($this->mountedTableActions);
         } finally {
+            array_pop($this->mountedTableActionsArguments);
             array_pop($this->mountedTableActionsData);
         }
     }
@@ -315,7 +318,7 @@ trait HasActions
         $this->mountedTableActionsData = [];
     }
 
-    public function unmountTableAction(bool $shouldCancelParentActions = true): void
+    public function unmountTableAction(bool $shouldCancelParentActions = true, bool $shouldCloseModal = true): void
     {
         $action = $this->getMountedTableAction();
 
@@ -339,7 +342,9 @@ trait HasActions
         }
 
         if (! count($this->mountedTableActions)) {
-            $this->closeTableActionModal();
+            if ($shouldCloseModal) {
+                $this->closeTableActionModal();
+            }
 
             $action?->record(null);
             $this->mountedTableActionRecord(null);

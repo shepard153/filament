@@ -35,6 +35,17 @@ it('can validate an action\'s data', function () {
         ->assertNotDispatched('data-called');
 });
 
+it('can access form data in before hook', function () {
+    livewire(Actions::class)
+        ->callAction('before-hook-data', data: [
+            'payload' => $payload = Str::random(),
+        ])
+        ->assertHasNoActionErrors()
+        ->assertDispatched('before-hook-called', data: [
+            'payload' => $payload,
+        ]);
+});
+
 it('can set default action data when mounted', function () {
     livewire(Actions::class)
         ->mountAction('data')
@@ -285,7 +296,7 @@ it('will assert that a notification was not sent', function () {
         ->assertNotNotified('An incorrect notification');
 
     $this->expectException('PHPUnit\Framework\ExpectationFailedException');
-    $this->expectExceptionMessage('The notification with the given configration was sent');
+    $this->expectExceptionMessage('The notification with the given configuration was sent');
 
     livewire(Actions::class)
         ->callAction('shows-notification-with-id')

@@ -10,7 +10,7 @@ trait HasState
 {
     protected ?string $statePath = null;
 
-    protected string $cachedAbsoluteStatePath;
+    protected ?string $cachedAbsoluteStatePath = null;
 
     public function callAfterStateHydrated(): void
     {
@@ -27,13 +27,13 @@ trait HasState
     {
         foreach ($this->getComponents(withHidden: true) as $component) {
             if ($component->getStatePath() === $path) {
-                $component->callAfterStateUpdated();
+                $component->callAfterStateUpdated(shouldBubbleToParents: false);
 
                 return true;
             }
 
             if (str($path)->startsWith("{$component->getStatePath()}.")) {
-                $component->callAfterStateUpdated();
+                $component->callAfterStateUpdated(shouldBubbleToParents: false);
             }
 
             foreach ($component->getChildComponentContainers() as $container) {
@@ -72,14 +72,31 @@ trait HasState
     public function dehydrateState(array &$state = [], bool $isDehydrated = true): array
     {
         foreach ($this->getComponents(withHidden: true) as $component) {
-            if ($component->isHiddenAndNotDehydrated()) {
-                continue;
-            }
-
             $component->dehydrateState($state, $isDehydrated);
         }
 
         return $state;
+    }
+
+    public function hasDehydratedComponent(string $statePath): bool
+    {
+        foreach ($this->getComponents(withHidden: true) as $component) {
+            if (! $component->isDehydrated()) {
+                continue;
+            }
+
+            if ($component->hasStatePath() && ($component->getStatePath() === $statePath)) {
+                return true;
+            }
+
+            foreach ($component->getChildComponentContainers(withHidden: true) as $container) {
+                if ($container->hasDehydratedComponent($statePath)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -89,10 +106,6 @@ trait HasState
     public function mutateDehydratedState(array &$state = []): array
     {
         foreach ($this->getComponents(withHidden: true) as $component) {
-            if ($component->isHiddenAndNotDehydrated()) {
-                continue;
-            }
-
             if (! $component->isDehydrated()) {
                 continue;
             }
@@ -225,19 +238,25 @@ trait HasState
     {
         $state = $this->validate();
 
-        value($afterValidate);
-
         if ($shouldCallHooksBefore) {
             $this->callBeforeStateDehydrated();
-            $this->saveRelationships();
-            $this->loadStateFromRelationships(andHydrate: true);
+
+            $afterValidate || $this->saveRelationships();
+            $afterValidate || $this->loadStateFromRelationships(andHydrate: true);
         }
 
         $this->dehydrateState($state);
         $this->mutateDehydratedState($state);
 
         if ($statePath = $this->getStatePath()) {
-            return data_get($state, $statePath) ?? [];
+            $state = data_get($state, $statePath) ?? [];
+        }
+
+        if ($afterValidate) {
+            value($afterValidate, $state);
+
+            $shouldCallHooksBefore && $this->saveRelationships();
+            $shouldCallHooksBefore && $this->loadStateFromRelationships(andHydrate: true);
         }
 
         return $state;
@@ -271,13 +290,17 @@ trait HasState
 
     public function getStatePath(bool $isAbsolute = true): string
     {
-        if (isset($this->cachedAbsoluteStatePath)) {
+        if (! $isAbsolute) {
+            return $this->statePath ?? '';
+        }
+
+        if ($this->cachedAbsoluteStatePath !== null) {
             return $this->cachedAbsoluteStatePath;
         }
 
         $pathComponents = [];
 
-        if ($isAbsolute && $parentComponentStatePath = $this->getParentComponent()?->getStatePath()) {
+        if ($parentComponentStatePath = $this->getParentComponent()?->getStatePath()) {
             $pathComponents[] = $parentComponentStatePath;
         }
 
@@ -290,6 +313,6 @@ trait HasState
 
     protected function flushCachedAbsoluteStatePath(): void
     {
-        unset($this->cachedAbsoluteStatePath);
+        $this->cachedAbsoluteStatePath = null;
     }
 }

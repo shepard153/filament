@@ -15,7 +15,6 @@ use Filament\Pages\Concerns;
 use Filament\Pages\Page;
 use Filament\Panel;
 use Filament\Support\Enums\Alignment;
-use Filament\Support\Enums\MaxWidth;
 use Filament\Support\Exceptions\Halt;
 use Filament\Support\Facades\FilamentView;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -27,22 +26,20 @@ use Illuminate\Support\Js;
 use Illuminate\Validation\Rules\Password;
 use Throwable;
 
-use function Filament\Support\is_app_url;
-
 /**
  * @property Form $form
  */
 class EditProfile extends Page
 {
     use Concerns\CanUseDatabaseTransactions;
+    use Concerns\HasMaxWidth;
+    use Concerns\HasTopbar;
     use Concerns\InteractsWithFormActions;
 
     /**
      * @var array<string, mixed> | null
      */
     public ?array $data = [];
-
-    protected ?string $maxWidth = null;
 
     protected static bool $isDiscovered = false;
 
@@ -161,8 +158,6 @@ class EditProfile extends Page
             $this->handleRecordUpdate($this->getUser(), $data);
 
             $this->callHook('afterSave');
-
-            $this->commitDatabaseTransaction();
         } catch (Halt $exception) {
             $exception->shouldRollbackDatabaseTransaction() ?
                 $this->rollBackDatabaseTransaction() :
@@ -174,6 +169,8 @@ class EditProfile extends Page
 
             throw $exception;
         }
+
+        $this->commitDatabaseTransaction();
 
         if (request()->hasSession() && array_key_exists('password', $data)) {
             request()->session()->put([
@@ -187,7 +184,7 @@ class EditProfile extends Page
         $this->getSavedNotification()?->send();
 
         if ($redirectUrl = $this->getRedirectUrl()) {
-            $this->redirect($redirectUrl, navigate: FilamentView::hasSpaMode() && is_app_url($redirectUrl));
+            $this->redirect($redirectUrl, navigate: FilamentView::hasSpaMode($redirectUrl));
         }
     }
 
@@ -211,7 +208,7 @@ class EditProfile extends Page
 
         return Notification::make()
             ->success()
-            ->title($this->getSavedNotificationTitle());
+            ->title($title);
     }
 
     protected function getSavedNotificationTitle(): ?string
@@ -358,12 +355,8 @@ class EditProfile extends Page
     protected function getLayoutData(): array
     {
         return [
+            'hasTopbar' => $this->hasTopbar(),
             'maxWidth' => $this->getMaxWidth(),
         ];
-    }
-
-    public function getMaxWidth(): MaxWidth | string | null
-    {
-        return $this->maxWidth;
     }
 }

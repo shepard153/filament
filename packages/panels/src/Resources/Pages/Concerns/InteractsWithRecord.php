@@ -18,12 +18,17 @@ trait InteractsWithRecord
         abort_unless(static::canAccess(['record' => $this->getRecord()]), 403);
     }
 
+    public function hydrateCanAuthorizeAccess(): void
+    {
+        abort_unless(static::canAccess(['record' => $this->getRecord()]), 403);
+    }
+
     protected function resolveRecord(int | string $key): Model
     {
         $record = static::getResource()::resolveRecordRouteBinding($key);
 
         if ($record === null) {
-            throw (new ModelNotFoundException())->setModel($this->getModel(), [$key]);
+            throw (new ModelNotFoundException)->setModel($this->getModel(), [$key]);
         }
 
         return $record;

@@ -18,8 +18,11 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasOneOrMany;
+use Illuminate\Database\Eloquent\Relations\HasOneOrManyThrough;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
@@ -245,7 +248,7 @@ class Select extends Field implements Contracts\CanDisableOptions, Contracts\Has
         return $this;
     }
 
-    public function createOptionUsing(Closure $callback): static
+    public function createOptionUsing(?Closure $callback): static
     {
         $this->createOptionUsing = $callback;
 
@@ -273,7 +276,8 @@ class Select extends Field implements Contracts\CanDisableOptions, Contracts\Has
         }
 
         $action = Action::make($this->getCreateOptionActionName())
-            ->form(function (Select $component, Form $form): array | Form | null {
+            ->label(__('filament-forms::components.select.actions.create_option.label'))
+            ->form(static function (Select $component, Form $form): array | Form | null {
                 return $component->getCreateOptionActionForm($form->model(
                     $component->getRelationship() ? $component->getRelationship()->getModel()::class : null,
                 ));
@@ -391,7 +395,7 @@ class Select extends Field implements Contracts\CanDisableOptions, Contracts\Has
         return $this;
     }
 
-    public function updateOptionUsing(Closure $callback): static
+    public function updateOptionUsing(?Closure $callback): static
     {
         $this->updateOptionUsing = $callback;
 
@@ -418,21 +422,18 @@ class Select extends Field implements Contracts\CanDisableOptions, Contracts\Has
             return null;
         }
 
-        if (blank($this->getState())) {
-            return null;
-        }
-
         if (! $this->hasEditOptionActionFormSchema()) {
             return null;
         }
 
         $action = Action::make($this->getEditOptionActionName())
-            ->form(function (Select $component, Form $form): array | Form | null {
+            ->label(__('filament-forms::components.select.actions.edit_option.label'))
+            ->form(static function (Select $component, Form $form): array | Form | null {
                 return $component->getEditOptionActionForm(
                     $form->model($component->getSelectedRecord()),
                 );
             })
-            ->fillForm($this->getEditOptionActionFormData())
+            ->fillForm(static fn (Select $component) => $component->getEditOptionActionFormData())
             ->action(static function (Action $action, array $arguments, Select $component, array $data, ComponentContainer $form) {
                 if (! $component->getUpdateOptionUsing()) {
                     throw new Exception("Select field [{$component->getStatePath()}] must have a [updateOptionUsing()] closure set.");
@@ -449,7 +450,8 @@ class Select extends Field implements Contracts\CanDisableOptions, Contracts\Has
             ->icon(FilamentIcon::resolve('forms::components.select.actions.edit-option') ?? 'heroicon-m-pencil-square')
             ->iconButton()
             ->modalHeading($this->getEditOptionModalHeading() ?? __('filament-forms::components.select.actions.edit_option.modal.heading'))
-            ->modalSubmitActionLabel(__('filament-forms::components.select.actions.edit_option.modal.actions.save.label'));
+            ->modalSubmitActionLabel(__('filament-forms::components.select.actions.edit_option.modal.actions.save.label'))
+            ->visible(fn (): bool => filled($this->getState()));
 
         if ($this->modifyManageOptionActionsUsing) {
             $action = $this->evaluate($this->modifyManageOptionActionsUsing, [
@@ -467,9 +469,9 @@ class Select extends Field implements Contracts\CanDisableOptions, Contracts\Has
     }
 
     /**
-     * @return array<string, mixed>
+     * @return ?array<string, mixed>
      */
-    public function getEditOptionActionFormData(): array
+    public function getEditOptionActionFormData(): ?array
     {
         return $this->evaluate($this->fillEditOptionActionFormUsing);
     }
@@ -706,6 +708,7 @@ class Select extends Field implements Contracts\CanDisableOptions, Contracts\Has
             if ($modifyQueryUsing) {
                 $relationshipQuery = $component->evaluate($modifyQueryUsing, [
                     'query' => $relationshipQuery,
+                    'search' => $search,
                 ]) ?? $relationshipQuery;
             }
 
@@ -768,7 +771,16 @@ class Select extends Field implements Contracts\CanDisableOptions, Contracts\Has
             if ($modifyQueryUsing) {
                 $relationshipQuery = $component->evaluate($modifyQueryUsing, [
                     'query' => $relationshipQuery,
+                    'search' => null,
                 ]) ?? $relationshipQuery;
+            }
+
+            $baseRelationshipQuery = $relationshipQuery->getQuery();
+
+            if (isset($baseRelationshipQuery->limit)) {
+                $component->optionsLimit($baseRelationshipQuery->limit);
+            } elseif ($component->isSearchable() && filled($component->getSearchColumns())) {
+                $relationshipQuery->limit($component->getOptionsLimit());
             }
 
             $qualifiedRelatedKeyName = $component->getQualifiedRelatedKeyNameForRelationship($relationship);
@@ -801,40 +813,73 @@ class Select extends Field implements Contracts\CanDisableOptions, Contracts\Has
                 ->toArray();
         });
 
-        $this->loadStateFromRelationshipsUsing(static function (Select $component, $state): void {
+        $this->loadStateFromRelationshipsUsing(static function (Select $component, $state) use ($modifyQueryUsing): void {
             if (filled($state)) {
                 return;
             }
 
             $relationship = $component->getRelationship();
 
-            if ($relationship instanceof BelongsToMany) {
-                /** @var Collection $relatedModels */
-                $relatedModels = $relationship->getResults();
+            if (
+                ($relationship instanceof BelongsToMany) ||
+                ($relationship instanceof (class_exists(HasOneOrManyThrough::class) ? HasOneOrManyThrough::class : HasManyThrough::class))
+            ) {
+                if ($modifyQueryUsing) {
+                    $component->evaluate($modifyQueryUsing, [
+                        'query' => $relationship->getQuery(),
+                        'search' => null,
+                    ]);
+                }
+
+                /** @var Collection $relatedRecords */
+                $relatedRecords = $relationship->getResults();
 
                 $component->state(
                     // Cast the related keys to a string, otherwise JavaScript does not
                     // know how to handle deselection.
                     //
                     // https://github.com/filamentphp/filament/issues/1111
-                    $relatedModels
-                        ->pluck($relationship->getRelatedKeyName())
+                    $relatedRecords
+                        ->pluck(($relationship instanceof BelongsToMany) ? $relationship->getRelatedKeyName() : $relationship->getRelated()->getKeyName())
                         ->map(static fn ($key): string => strval($key))
-                        ->toArray(),
+                        ->all(),
                 );
 
                 return;
             }
 
-            if (
-                ($relationship instanceof HasManyThrough) ||
-                ($relationship instanceof BelongsToThrough)
-            ) {
+            if ($relationship instanceof BelongsToThrough) {
+                /** @var ?Model $relatedModel */
                 $relatedModel = $relationship->getResults();
 
                 $component->state(
-                    $relatedModel->getAttribute(
+                    $relatedModel?->getAttribute(
                         $relationship->getRelated()->getKeyName(),
+                    ),
+                );
+
+                return;
+            }
+
+            if ($relationship instanceof HasMany) {
+                /** @var Collection $relatedRecords */
+                $relatedRecords = $relationship->getResults();
+
+                $component->state(
+                    $relatedRecords
+                        ->pluck($relationship->getLocalKeyName())
+                        ->all(),
+                );
+
+                return;
+            }
+
+            if ($relationship instanceof HasOne) {
+                $relatedModel = $relationship->getResults();
+
+                $component->state(
+                    $relatedModel?->getAttribute(
+                        $relationship->getLocalKeyName(),
                     ),
                 );
 
@@ -844,12 +889,8 @@ class Select extends Field implements Contracts\CanDisableOptions, Contracts\Has
             /** @var BelongsTo $relationship */
             $relatedModel = $relationship->getResults();
 
-            if (! $relatedModel) {
-                return;
-            }
-
             $component->state(
-                $relatedModel->getAttribute(
+                $relatedModel?->getAttribute(
                     $relationship->getOwnerKeyName(),
                 ),
             );
@@ -879,6 +920,7 @@ class Select extends Field implements Contracts\CanDisableOptions, Contracts\Has
             if ($modifyQueryUsing) {
                 $relationshipQuery = $component->evaluate($modifyQueryUsing, [
                     'query' => $relationshipQuery,
+                    'search' => null,
                 ]) ?? $relationshipQuery;
             }
 
@@ -897,6 +939,7 @@ class Select extends Field implements Contracts\CanDisableOptions, Contracts\Has
             if ($modifyQueryUsing) {
                 $relationshipQuery = $component->evaluate($modifyQueryUsing, [
                     'query' => $relationshipQuery,
+                    'search' => null,
                 ]) ?? $relationshipQuery;
             }
 
@@ -947,12 +990,12 @@ class Select extends Field implements Contracts\CanDisableOptions, Contracts\Has
             },
         );
 
-        $this->saveRelationshipsUsing(static function (Select $component, Model $record, $state) {
+        $this->saveRelationshipsUsing(static function (Select $component, Model $record, $state) use ($modifyQueryUsing) {
             $relationship = $component->getRelationship();
 
             if (
                 ($relationship instanceof HasOneOrMany) ||
-                ($relationship instanceof HasManyThrough) ||
+                ($relationship instanceof (class_exists(HasOneOrManyThrough::class) ? HasOneOrManyThrough::class : HasManyThrough::class)) ||
                 ($relationship instanceof BelongsToThrough)
             ) {
                 return;
@@ -975,15 +1018,39 @@ class Select extends Field implements Contracts\CanDisableOptions, Contracts\Has
                 return;
             }
 
+            if ($modifyQueryUsing) {
+                $component->evaluate($modifyQueryUsing, [
+                    'query' => $relationship->getQuery(),
+                    'search' => null,
+                ]);
+            }
+
+            /** @var Collection $relatedRecords */
+            $relatedRecords = $relationship->getResults();
+
+            $state = Arr::wrap($state ?? []);
+
+            $recordsToDetach = array_diff(
+                $relatedRecords
+                    ->pluck($relationship->getRelatedKeyName())
+                    ->map(static fn ($key): string => strval($key))
+                    ->all(),
+                $state,
+            );
+
+            if (count($recordsToDetach) > 0) {
+                $relationship->detach($recordsToDetach);
+            }
+
             $pivotData = $component->getPivotData();
 
             if ($pivotData === []) {
-                $relationship->sync($state ?? []);
+                $relationship->sync($state, detaching: false);
 
                 return;
             }
 
-            $relationship->syncWithPivotValues($state ?? [], $pivotData);
+            $relationship->syncWithPivotValues($state, $pivotData, detaching: false);
         });
 
         $this->createOptionUsing(static function (Select $component, array $data, Form $form) {
@@ -1019,7 +1086,7 @@ class Select extends Field implements Contracts\CanDisableOptions, Contracts\Has
         $query->where(function (Builder $query) use ($databaseConnection, $isForcedCaseInsensitive, $search): Builder {
             $isFirst = true;
 
-            foreach ($this->getSearchColumns() as $searchColumn) {
+            foreach ($this->getSearchColumns() ?? [] as $searchColumn) {
                 $whereClause = $isFirst ? 'where' : 'orWhere';
 
                 $query->{$whereClause}(
@@ -1083,7 +1150,7 @@ class Select extends Field implements Contracts\CanDisableOptions, Contracts\Has
         return parent::getLabel();
     }
 
-    public function getRelationship(): BelongsTo | BelongsToMany | HasOneOrMany | HasManyThrough | BelongsToThrough | null
+    public function getRelationship(): BelongsTo | BelongsToMany | HasOneOrMany | HasManyThrough | HasOneOrManyThrough | BelongsToThrough | null
     {
         if (blank($this->getRelationshipName())) {
             return null;
@@ -1145,8 +1212,8 @@ class Select extends Field implements Contracts\CanDisableOptions, Contracts\Has
 
     public function hasDynamicSearchResults(): bool
     {
-        if ($this->hasRelationship() && empty($this->searchColumns)) {
-            return ! $this->isPreloaded();
+        if ($this->hasRelationship() && blank($this->getSearchColumns())) {
+            return false;
         }
 
         return $this->getSearchResultsUsing instanceof Closure;
@@ -1208,7 +1275,7 @@ class Select extends Field implements Contracts\CanDisableOptions, Contracts\Has
             return $relationship->getQualifiedRelatedKeyName();
         }
 
-        if ($relationship instanceof HasManyThrough) {
+        if ($relationship instanceof (class_exists(HasOneOrManyThrough::class) ? HasOneOrManyThrough::class : HasManyThrough::class)) {
             return $relationship->getQualifiedForeignKeyName();
         }
 

@@ -6,6 +6,8 @@ use Filament\Http\Controllers\Auth\LogoutController;
 use Filament\Http\Controllers\RedirectToHomeController;
 use Filament\Http\Controllers\RedirectToTenantController;
 use Filament\Panel;
+use Illuminate\Foundation\Application;
+use Illuminate\Routing\RouteUri;
 use Illuminate\Support\Facades\Route;
 
 Route::name('filament.')
@@ -22,10 +24,10 @@ Route::name('filament.')
             foreach ((empty($domains) ? [null] : $domains) as $domain) {
                 Route::domain($domain)
                     ->middleware($panel->getMiddleware())
-                    ->name("{$panelId}.")
+                    ->name("{$panelId}." . ((filled($domain) && (count($domains) > 1)) ? "{$domain}." : ''))
                     ->prefix($panel->getPath())
                     ->group(function () use ($panel, $hasTenancy, $tenantDomain, $tenantRoutePrefix, $tenantSlugAttribute) {
-                        if ($routes = $panel->getRoutes()) {
+                        foreach ($panel->getRoutes() as $routes) {
                             $routes($panel);
                         }
 
@@ -55,7 +57,7 @@ Route::name('filament.')
 
                         Route::middleware($panel->getAuthMiddleware())
                             ->group(function () use ($panel, $hasTenancy, $tenantDomain, $tenantRoutePrefix, $tenantSlugAttribute): void {
-                                if ($routes = $panel->getAuthenticatedRoutes()) {
+                                foreach ($panel->getAuthenticatedRoutes() as $routes) {
                                     $routes($panel);
                                 }
 
@@ -108,12 +110,18 @@ Route::name('filament.')
                                 }
 
                                 $routeGroup
-                                    ->group(function () use ($panel): void {
-                                        if ($routes = $panel->getAuthenticatedTenantRoutes()) {
+                                    ->group(function () use ($hasTenancy, $panel, $tenantDomain): void {
+                                        foreach ($panel->getAuthenticatedTenantRoutes() as $routes) {
                                             $routes($panel);
                                         }
 
-                                        Route::get('/', RedirectToHomeController::class)->name('home');
+                                        if (version_compare(Application::VERSION, '13.0.0', '<')) { /** @phpstan-ignore if.alwaysFalse, if.alwaysTrue */
+                                            $route = Route::get('/', RedirectToHomeController::class)->name('home');
+
+                                            if ($hasTenancy && blank($tenantDomain)) {
+                                                $route->fallback();
+                                            }
+                                        }
 
                                         Route::name('tenant.')->group(function () use ($panel): void {
                                             if ($panel->hasTenantBilling()) {
@@ -132,6 +140,21 @@ Route::name('filament.')
 
                                         foreach ($panel->getResources() as $resource) {
                                             $resource::registerRoutes($panel);
+                                        }
+
+                                        if (version_compare(Application::VERSION, '13.0.0', '>=')) { /** @phpstan-ignore if.alwaysTrue, if.alwaysFalse */
+                                            $groupStack = Route::getGroupStack();
+                                            $rootDomain = RouteUri::parse(end($groupStack)['domain'] ?? '')->uri;
+                                            $rootUri = RouteUri::parse(trim(Route::getLastGroupPrefix(), '/') ?: '/')->uri;
+                                            $rootKey = $rootDomain . $rootUri;
+
+                                            if (! isset(Route::getRoutes()->getRoutesByMethod()['GET'][$rootKey])) {
+                                                $route = Route::get('/', RedirectToHomeController::class)->name('home');
+
+                                                if ($hasTenancy && blank($tenantDomain)) {
+                                                    $route->fallback();
+                                                }
+                                            }
                                         }
                                     });
 
@@ -161,7 +184,7 @@ Route::name('filament.')
 
                             $routeGroup
                                 ->group(function () use ($panel): void {
-                                    if ($routes = $panel->getTenantRoutes()) {
+                                    foreach ($panel->getTenantRoutes() as $routes) {
                                         $routes($panel);
                                     }
                                 });

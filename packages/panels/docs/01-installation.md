@@ -17,7 +17,7 @@ Filament requires the following to run:
 Install the Filament Panel Builder by running the following commands in your Laravel project directory:
 
 ```bash
-composer require filament/filament:"^3.2" -W
+composer require filament/filament:"^3.3" -W
 
 php artisan filament:install --panels
 ```
@@ -38,21 +38,37 @@ Open `/admin` in your web browser, sign in, and start building your app!
 Not sure where to start? Review the [Getting Started guide](getting-started) to learn how to build a complete Filament admin panel.
 
 ## Using other Filament packages
-The Filament Panel Builder pre-installs the [Form Builder](/docs/forms), [Table Builder](/docs/tables), [Notifications](/docs/notifications), [Actions](/docs/actions), [Infolists](/docs/infolists), and [Widgets](/docs/widgets) packages. No other installation steps are required to use these packages within a panel.
+The Filament Panel Builder pre-installs the [Form Builder](../forms/installation), [Table Builder](../tables/installation), [Notifications](../notifications/installation), [Actions](../actions/installation), [Infolists](../infolists/installation), and [Widgets](../widgets/installation) packages. No other installation steps are required to use these packages within a panel.
 
 ## Improving Filament panel performance
 
-### Caching Blade Icons
+### Optimizing Filament for production
 
-You may wish to consider running `php artisan icons:cache` locally, and also in your deployment script. This is because Filament uses the [Blade Icons](https://blade-ui-kit.com/blade-icons) package, which can be much more performant when cached.
+To optimize Filament for production, you should run the following command in your deployment script:
 
-### Caching Filament components
+```bash
+php artisan filament:optimize
+```
 
-You may also wish to consider running `php artisan filament:cache-components` in your deployment script, especially if you have large numbers of components (resources, pages, widgets, relation managers, custom Livewire components, etc.). This will create cache files in the `bootstrap/cache/filament` directory of your application, which contain indexes for each type of component. This can significantly improve the performance of Filament in some apps, as it reduces the number of files that need to be scanned and auto-discovered for components.
+This command will [cache the Filament components](#caching-filament-components) and additionally the [Blade icons](#caching-blade-icons), which can significantly improve the performance of your Filament panels. This command is a shorthand for the commands `php artisan filament:cache-components` and `php artisan icons:cache`.
+
+To clear the caches at once, you can run:
+
+```bash
+php artisan filament:optimize-clear
+```
+
+#### Caching Filament components
+
+If you're not using the [`filament:optimize` command](#optimizing-filament-for-production), you may wish to consider running `php artisan filament:cache-components` in your deployment script, especially if you have large numbers of components (resources, pages, widgets, relation managers, custom Livewire components, etc.). This will create cache files in the `bootstrap/cache/filament` directory of your application, which contain indexes for each type of component. This can significantly improve the performance of Filament in some apps, as it reduces the number of files that need to be scanned and auto-discovered for components.
 
 However, if you are actively developing your app locally, you should avoid using this command, as it will prevent any new components from being discovered until the cache is cleared or rebuilt.
 
 You can clear the cache at any time without rebuilding it by running `php artisan filament:clear-cached-components`.
+
+#### Caching Blade Icons
+
+If you're not using the [`filament:optimize` command](#optimizing-filament-for-production), you may wish to consider running `php artisan icons:cache` locally, and also in your deployment script. This is because Filament uses the [Blade Icons](https://blade-ui-kit.com/blade-icons) package, which can be much more performant when cached.
 
 ### Enabling OPcache on your server
 
@@ -70,7 +86,7 @@ You should also consider optimizing your Laravel app for production by running `
 
 ### Allowing users to access a panel
 
-By default, all `User` models can access Filament locally. However, when deploying to production, you must update your `App\Models\User.php` to implement the `FilamentUser` contract — ensuring that only the correct users can access your panel:
+By default, all `User` models can access Filament locally. However, when deploying to production or running unit tests, you must update your `App\Models\User.php` to implement the `FilamentUser` contract — ensuring that only the correct users can access your panel:
 
 ```php
 <?php
@@ -96,6 +112,12 @@ class User extends Authenticatable implements FilamentUser
 
 Learn more about [users](users).
 
+### Using a production-ready storage disk
+
+Filament has a storage disk defined in the [configuration](#publishing-configuration), which by default is set to `public`. You can set the `FILAMENT_FILESYSTEM_DISK` environment variable to change this.
+
+The `public` disk, while great for easy local development, is not suitable for production. It does not support file visibility, so features of Filament such as [file uploads](../forms/fields/file-upload) will create public files. In production, you need to use a production-ready disk such as `s3` with a private access policy, to prevent unauthorized access to the uploaded files.
+
 ## Publishing configuration
 
 You can publish the Filament package configuration (if needed) using the following command:
@@ -118,6 +140,8 @@ Since this package depends on other Filament packages, you can publish the langu
 php artisan vendor:publish --tag=filament-actions-translations
 
 php artisan vendor:publish --tag=filament-forms-translations
+
+php artisan vendor:publish --tag=filament-infolists-translations
 
 php artisan vendor:publish --tag=filament-notifications-translations
 
